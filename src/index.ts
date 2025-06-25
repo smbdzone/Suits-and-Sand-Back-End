@@ -11,6 +11,7 @@ import newsletterRoutes from './api/newsletter/newsletter.routes';
 import propertyRoutes from './api/properties/property.routes'
 import articleRoutes from './api/articles/article.routes'
 import enquiryRoutes from './api/enquiries/enquiry.routes'
+import applicationRoutes from './api/jobApplication/applications.routes'
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -32,6 +33,7 @@ app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/properties', propertyRoutes)
 app.use('/api/articles', articleRoutes)
 app.use('/api/enquiries', enquiryRoutes)
+app.use('/api/jobApplication', applicationRoutes);
 
 app.listen(PORT, () => {
   console.log(`Backend running on http://localhost:${PORT}`);

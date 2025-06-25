@@ -1,108 +1,133 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-interface IPaymentPlan {
+interface Feature {
+  id: string;
+  iconName: string;
+  title: string;
+  isSelected: boolean;
+}
+
+interface PaymentPlan {
   heading: string;
   subText: string;
 }
 
-interface IFAQ {
+interface FAQ {
   question: string;
   answer: string;
 }
 
-interface IFeatureItem {
-  title: string;
-  iconName: string;
-}
-
-interface IFeatures {
-  amenities: IFeatureItem[];
-  access: IFeatureItem[];
-  views: IFeatureItem[];
-}
-
-type UnitType =
-  | 'Studio'
-  | '1 BHK'
-  | '2 BHK'
-  | '3 BHK'
-  | '2 BHK Duplex'
-  | '3 BHK Duplex'
-  | 'Penthouse';
-
 interface UnitImages {
-  [key: string]: string; // File path relative to 'backend/uploads'
+  [key: string]: string; 
 }
 
 interface FloorData {
-  defaultLayout: string; // File path
+  defaultLayout: string; 
   unitImages: UnitImages;
-  selectedUnitTypes: UnitType[];
+  selectedUnitTypes: string[]; 
 }
 
 export interface IProperty extends Document {
   title: string;
   area: string;
-  mainVideoUrl: string;
   price: string;
-  images: string[];
+  mainVideoUrl: string;
   developer: string;
-  brochure?: string;
   type: string;
+  images: string[]; // image URLs or paths
+
+  brochureFile?: string;
+  paymentPlans: PaymentPlan[];
+  faqs: FAQ[];
+
+  amenities: Feature[];
+  access: Feature[];
+  views: Feature[];
+
   description: string;
-  googleMapsEmbedLink: string;
-  paymentPlans: IPaymentPlan[];
-  faqs: IFAQ[];
-  features: IFeatures;
-  floors: Record<number, FloorData>; // NEW
+  longitude: string;
+  latitude: string;
+
+  numFloors: number;
+  floors: {
+    [floorNumber: number]: FloorData;
+  };
 }
 
-const PaymentPlanSchema: Schema = new Schema({
-  heading: { type: String, required: true },
-  subText: { type: String, required: true },
-}, { _id: false });
-
-const FAQSchema: Schema = new Schema({
-  question: { type: String, required: true },
-  answer: { type: String, required: true },
-}, { _id: false });
-
-const FeatureItemSchema: Schema = new Schema({
-  title: { type: String, required: true },
-  iconName: { type: String, required: true },
-}, { _id: false });
-
-const FeaturesSchema: Schema = new Schema({
-  amenities: [FeatureItemSchema],
-  access: [FeatureItemSchema],
-  views: [FeatureItemSchema],
-}, { _id: false });
-
-const FloorDataSchema: Schema = new Schema({
-  defaultLayout: { type: String, required: false }, // File path
-  unitImages: { type: Map, of: String, default: {} }, // Map<UnitType, file path>
-  selectedUnitTypes: [{ type: String }],
-}, { _id: false });
-
-const PropertySchema: Schema = new Schema({
-  title: { type: String, required: true },
-  area: { type: String, required: true },
-  mainVideoUrl: { type: String, required: true },
-  price: { type: String, required: true },
-  images: [{ type: String, required: true }],
-  developer: { type: String, required: true },
-  type: { type: String, required: true },
-  brochure: { type: String },
-  description: { type: String, required: true },
-  googleMapsEmbedLink: { type: String, required: true },
-  paymentPlans: [PaymentPlanSchema],
-  faqs: [FAQSchema],
-  features: FeaturesSchema,
-  floors: {
-    type: Map,
-    of: FloorDataSchema,
-    default: {},
+const FeatureSchema = new Schema<Feature>(
+  {
+    id: String,
+    iconName: String,
+    title: String,
+    isSelected: Boolean,
   },
-}, { timestamps: true });
+  { _id: false }
+);
+
+const PaymentPlanSchema = new Schema<PaymentPlan>(
+  {
+    heading: String,
+    subText: String,
+  },
+  { _id: false }
+);
+
+const FAQSchema = new Schema<FAQ>(
+  {
+    question: String,
+    answer: String,
+  },
+  { _id: false }
+);
+
+const UnitImagesSchema = new Schema(
+  {
+    // keys will be dynamic (unitType)
+  },
+  { _id: false, strict: false } // allow dynamic unit type keys
+);
+
+const FloorDataSchema = new Schema<FloorData>(
+  {
+    defaultLayout: String,
+    unitImages: UnitImagesSchema,
+    selectedUnitTypes: [String],
+  },
+  { _id: false }
+);
+
+const PropertySchema = new Schema<IProperty>(
+  {
+    title: { type: String, required: true },
+    area: { type: String, required: true },
+    price: { type: String, required: true },
+    mainVideoUrl: { type: String },
+    developer: { type: String, required: true },
+    type: { type: String, required: true },
+    images: [{ type: String, required: true }],
+
+    brochureFile: { type: String },
+    paymentPlans: [PaymentPlanSchema],
+    faqs: [FAQSchema],
+
+    amenities: [FeatureSchema],
+    access: [FeatureSchema],
+    views: [FeatureSchema],
+
+    description: { type: String, required: true },
+    longitude: { type: String, required: true },
+    latitude: { type: String, required: true },
+
+    numFloors: { type: Number, required: true },
+    floors: {
+      type: Map,
+      of: FloorDataSchema,
+      default: {},
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
 
 export default mongoose.model<IProperty>('Property', PropertySchema);

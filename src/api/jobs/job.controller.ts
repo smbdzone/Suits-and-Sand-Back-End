@@ -10,6 +10,17 @@ export const getJobs = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+export const getJobTitles = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const jobs = await Job.find({}, 'title'); // Only fetch 'title' field
+    const titles = jobs.map(job => job.title);
+    res.json(titles);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch job titles' });
+  }
+};
+
+
 export const createJob = async (req: Request, res: Response): Promise<void> => {
   try {
     const { title, description, remunerationType, commission, salary } = req.body;
