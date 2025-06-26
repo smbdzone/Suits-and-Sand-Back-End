@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { Article } from '../../models/article.model';
+import supabase from '../../services/supabaseClient';
 
 export const getArticles = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -24,12 +25,12 @@ export const getArticleById = async (req: Request, res: Response): Promise<void>
   }
 };
 
+
+
+const useSupabase = process.env.USE_SUPABASE === 'true';
+
 export const createArticle = async (req: Request, res: Response): Promise<void> => {
   try {
-    console.log('Incoming request headers:', req.headers);
-    console.log('Incoming body:', req.body);
-    console.log('Incoming file:', req.file);
-
     const {
       title,
       category,
@@ -52,12 +53,30 @@ export const createArticle = async (req: Request, res: Response): Promise<void> 
       !articleSchemas ||
       !bannerFile
     ) {
-      console.log('Missing fields');
       res.status(400).json({ message: 'All fields are required.' });
       return;
     }
 
-    const bannerUrl = `/uploads/${bannerFile.filename}`;
+    let bannerUrl = '';
+
+    if (useSupabase) {
+      const buffer = bannerFile.buffer;
+      const fileName = `${Date.now()}-${bannerFile.originalname}`;
+
+      const { error } = await supabase.storage
+        .from('uploads')
+        .upload(fileName, buffer, {
+          contentType: bannerFile.mimetype,
+          upsert: true,
+        });
+
+      if (error) throw error;
+
+      bannerUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/uploads/${fileName}`;
+    } else {
+      bannerUrl = `/uploads/${bannerFile.filename}`;
+    }
+
     const newArticle = new Article({
       title,
       category,
@@ -70,13 +89,13 @@ export const createArticle = async (req: Request, res: Response): Promise<void> 
     });
 
     await newArticle.save();
-    console.log('Article created successfully:', newArticle);
     res.status(201).json(newArticle);
   } catch (error) {
     console.error('Error in createArticle:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 
 export const updateArticle = async (req: Request, res: Response): Promise<void> => {
@@ -103,7 +122,23 @@ export const updateArticle = async (req: Request, res: Response): Promise<void> 
     };
 
     if (req.file) {
-      updateData.bannerUrl = `/uploads/${req.file.filename}`;
+      if (useSupabase) {
+        const buffer = req.file.buffer;
+        const fileName = `${Date.now()}-${req.file.originalname}`;
+
+        const { error } = await supabase.storage
+          .from('uploads')
+          .upload(fileName, buffer, {
+            contentType: req.file.mimetype,
+            upsert: true,
+          });
+
+        if (error) throw error;
+
+        updateData.bannerUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/uploads/${fileName}`;
+      } else {
+        updateData.bannerUrl = `/uploads/${req.file.filename}`;
+      }
     }
 
     const updatedArticle = await Article.findByIdAndUpdate(id, updateData, { new: true });
@@ -115,9 +150,11 @@ export const updateArticle = async (req: Request, res: Response): Promise<void> 
 
     res.json(updatedArticle);
   } catch (error) {
+    console.error('Error in updateArticle:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 export const deleteArticle = async (req: Request, res: Response): Promise<void> => {
   try {

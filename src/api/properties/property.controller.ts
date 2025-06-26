@@ -1,6 +1,25 @@
 import { Request, Response } from 'express';
 import Property from '../../models/property.model';
 import { IProperty } from '../../models/property.model';
+import supabase from '../../services/supabaseClient';
+
+const useSupabase = process.env.USE_SUPABASE === 'true';
+
+const uploadFileToSupabase = async (file: Express.Multer.File): Promise<string> => {
+  const buffer = file.buffer;
+  const fileName = `${Date.now()}-${file.originalname}`;
+
+  const { error } = await supabase.storage
+    .from('uploads')
+    .upload(fileName, buffer, {
+      contentType: file.mimetype,
+      upsert: true,
+    });
+
+  if (error) throw error;
+
+  return `${process.env.SUPABASE_URL}/storage/v1/object/public/uploads/${fileName}`;
+};
 
 export const createProperty = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -23,37 +42,73 @@ export const createProperty = async (req: Request, res: Response): Promise<void>
       numFloors,
     } = req.body;
 
-    const images = files['propertyImages'] || [];
+    const propertyImages = files['propertyImages'] || [];
     const brochureFile = files['brochureFile']?.[0];
 
+    // Handle property images
+    let imageUrls: string[] = [];
+    if (propertyImages.length > 0) {
+      if (useSupabase) {
+        imageUrls = await Promise.all(propertyImages.map(img => uploadFileToSupabase(img)));
+      } else {
+        imageUrls = propertyImages.map(img => img.path);
+      }
+    }
+
+    // Handle brochure file
+    let brochureUrl = '';
+    if (brochureFile) {
+      if (useSupabase) {
+        brochureUrl = await uploadFileToSupabase(brochureFile);
+      } else {
+        brochureUrl = brochureFile.path;
+      }
+    }
+
+    // Handle floor data
     const floorData: any = {};
     for (let i = 0; i < parseInt(numFloors); i++) {
-      const defaultLayout = files[`floor_${i}_defaultLayout`]?.[0]?.path;
+      const defaultLayoutFile = files[`floor_${i}_defaultLayout`]?.[0];
       const selectedUnitTypes = JSON.parse(req.body[`floor_${i}_selectedUnitTypes`] || '[]');
       const unitImages: any = {};
 
+      // Handle default layout
+      let defaultLayoutUrl = '';
+      if (defaultLayoutFile) {
+        if (useSupabase) {
+          defaultLayoutUrl = await uploadFileToSupabase(defaultLayoutFile);
+        } else {
+          defaultLayoutUrl = defaultLayoutFile.path;
+        }
+      }
+
+      // Handle unit images
       for (const unitType of selectedUnitTypes) {
-        const unitImage = files[`floor_${i}_unit_${unitType.replace(/\s/g, '_')}`]?.[0];
-        if (unitImage) {
-          unitImages[unitType] = unitImage.path;
+        const unitImageFile = files[`floor_${i}_unit_${unitType.replace(/\s/g, '_')}`]?.[0];
+        if (unitImageFile) {
+          if (useSupabase) {
+            unitImages[unitType] = await uploadFileToSupabase(unitImageFile);
+          } else {
+            unitImages[unitType] = unitImageFile.path;
+          }
         }
       }
 
       floorData[i] = {
-        defaultLayout,
+        defaultLayout: defaultLayoutUrl,
         selectedUnitTypes,
         unitImages
       };
     }
 
-const safeParse = (input: any, fallback: any = []) => {
-  try {
-    if (!input || input === 'undefined') return fallback;
-    return JSON.parse(input);
-  } catch (err) {
-    return fallback;
-  }
-};
+    const safeParse = (input: any, fallback: any = []) => {
+      try {
+        if (!input || input === 'undefined') return fallback;
+        return JSON.parse(input);
+      } catch (err) {
+        return fallback;
+      }
+    };
 
     const newProperty: IProperty = new Property({
       title,
@@ -62,13 +117,13 @@ const safeParse = (input: any, fallback: any = []) => {
       mainVideoUrl,
       developer,
       type,
-      images: images.map(img => img.path),
-      brochureFile: brochureFile?.path,
+      images: imageUrls,
+      brochureFile: brochureUrl,
       paymentPlans: safeParse(paymentPlans),
-faqs: safeParse(faqs),
-amenities: safeParse(amenities),
-access: safeParse(access),
-views: safeParse(views),
+      faqs: safeParse(faqs),
+      amenities: safeParse(amenities),
+      access: safeParse(access),
+      views: safeParse(views),
       description,
       longitude,
       latitude,

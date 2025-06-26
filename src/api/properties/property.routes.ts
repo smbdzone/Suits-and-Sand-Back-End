@@ -9,16 +9,19 @@ import {
 } from './property.controller';
 
 const router = express.Router();
+const useSupabase = process.env.USE_SUPABASE === 'true';
 
 // === Multer Config ===
-const storage = multer.diskStorage({
-  destination(req, file, cb) {
-    cb(null, path.join(__dirname, '..', '..', '..', 'uploads'));
-  },
-  filename(req, file, cb) {
-    cb(null, Date.now() + '_' + file.originalname);
-  },
-});
+const storage = useSupabase
+  ? multer.memoryStorage()
+  : multer.diskStorage({
+      destination(req, file, cb) {
+        cb(null, path.join(__dirname, '..', '..', '..', 'uploads'));
+      },
+      filename(req, file, cb) {
+        cb(null, Date.now() + '_' + file.originalname);
+      },
+    });
 
 const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
 const allowedBrochureTypes = [
