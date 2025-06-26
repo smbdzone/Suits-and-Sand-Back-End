@@ -7,13 +7,14 @@ import {
   updateArticle,
   deleteArticle,
 } from './article.controller';
+import path from 'path';
 
 const router = express.Router();
 
 // Multer config for file upload
 const storage = multer.diskStorage({
   destination: function (_req, _file, cb) {
-    cb(null, 'uploads/');
+    cb(null, path.join(__dirname, '..','..', '..', 'uploads'));
   },
   filename: function (_req, file, cb) {
     cb(null, `${Date.now()}-${file.originalname}`);

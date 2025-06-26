@@ -26,6 +26,10 @@ export const getArticleById = async (req: Request, res: Response): Promise<void>
 
 export const createArticle = async (req: Request, res: Response): Promise<void> => {
   try {
+    console.log('Incoming request headers:', req.headers);
+    console.log('Incoming body:', req.body);
+    console.log('Incoming file:', req.file);
+
     const {
       title,
       category,
@@ -48,6 +52,7 @@ export const createArticle = async (req: Request, res: Response): Promise<void> 
       !articleSchemas ||
       !bannerFile
     ) {
+      console.log('Missing fields');
       res.status(400).json({ message: 'All fields are required.' });
       return;
     }
@@ -65,11 +70,14 @@ export const createArticle = async (req: Request, res: Response): Promise<void> 
     });
 
     await newArticle.save();
+    console.log('Article created successfully:', newArticle);
     res.status(201).json(newArticle);
   } catch (error) {
+    console.error('Error in createArticle:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 export const updateArticle = async (req: Request, res: Response): Promise<void> => {
   try {

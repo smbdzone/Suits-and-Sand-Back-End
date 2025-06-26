@@ -13,8 +13,9 @@ const articleSchema = new mongoose.Schema({
     required: true,
     enum: ['Tech', 'Business', 'Design'],
   },
-  banner: {
-    type: String, // Multer will store filename or full path
+  // FIXED: Changed from 'banner' to 'bannerUrl' to match controller
+  bannerUrl: {
+    type: String,
     required: true,
   },
   description: {
