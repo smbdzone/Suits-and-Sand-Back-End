@@ -1,7 +1,11 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+// -------------------------
+// Interfaces
+// -------------------------
 interface Feature {
   id: string;
+  icon: string;
   iconName: string;
   title: string;
   isSelected: boolean;
@@ -12,19 +16,29 @@ interface PaymentPlan {
   subText: string;
 }
 
+interface PaymentPlanGroup {
+  [planType: string]: PaymentPlan[]; 
+}
+
 interface FAQ {
   question: string;
   answer: string;
 }
 
-interface UnitImages {
-  [key: string]: string; 
+interface UnitVariant {
+  variantName: string;
+  image: string;
+}
+
+interface UnitImageData {
+  image: string;
+  variants?: UnitVariant[];
 }
 
 interface FloorData {
-  defaultLayout: string; 
-  unitImages: UnitImages;
-  selectedUnitTypes: string[]; 
+  defaultLayout: string;
+  unitImages: Map<string, UnitImageData>;
+  selectedUnitTypes: string[];
 }
 
 export interface IProperty extends Document {
@@ -34,11 +48,13 @@ export interface IProperty extends Document {
   mainVideoUrl: string;
   developer: string;
   type: string;
-  images: string[]; // image URLs or paths
+  images: string[];
 
   brochureFile?: string;
-  paymentPlans: PaymentPlan[];
+  paymentPlans: PaymentPlanGroup;
   faqs: FAQ[];
+  quarter: string;
+  year: string;
 
   amenities: Feature[];
   access: Feature[];
@@ -49,15 +65,17 @@ export interface IProperty extends Document {
   latitude: string;
 
   numFloors: number;
-  floors: {
-    [floorNumber: number]: FloorData;
-  };
+  floors: Map<number, FloorData>;
 }
 
+// -------------------------
+// Sub Schemas
+// -------------------------
 const FeatureSchema = new Schema<Feature>(
   {
     id: String,
     iconName: String,
+    icon: String,
     title: String,
     isSelected: Boolean,
   },
@@ -80,22 +98,41 @@ const FAQSchema = new Schema<FAQ>(
   { _id: false }
 );
 
-const UnitImagesSchema = new Schema(
+const UnitVariantSchema = new Schema<UnitVariant>(
   {
-    // keys will be dynamic (unitType)
+    variantName: String,
+    image: String,
   },
-  { _id: false, strict: false } // allow dynamic unit type keys
+  { _id: false }
+);
+
+const UnitImageDataSchema = new Schema<UnitImageData>(
+  {
+    image: String,
+    variants: [UnitVariantSchema],
+  },
+  { _id: false }
 );
 
 const FloorDataSchema = new Schema<FloorData>(
   {
     defaultLayout: String,
-    unitImages: UnitImagesSchema,
+
+    // ✅ This is how we handle dynamic keys like "Studio", "2 BHK", etc.
+    unitImages: {
+      type: Map,
+      of: UnitImageDataSchema,
+      default: {},
+    },
+
     selectedUnitTypes: [String],
   },
   { _id: false }
 );
 
+// -------------------------
+// Main Schema
+// -------------------------
 const PropertySchema = new Schema<IProperty>(
   {
     title: { type: String, required: true },
@@ -107,7 +144,15 @@ const PropertySchema = new Schema<IProperty>(
     images: [{ type: String, required: true }],
 
     brochureFile: { type: String },
-    paymentPlans: [PaymentPlanSchema],
+    quarter: { type: String, required: true },
+    year: { type: String, required: true },
+
+    paymentPlans: {
+      type: Map,
+      of: [PaymentPlanSchema],
+      default: {},
+    },
+
     faqs: [FAQSchema],
 
     amenities: [FeatureSchema],
@@ -119,6 +164,7 @@ const PropertySchema = new Schema<IProperty>(
     latitude: { type: String, required: true },
 
     numFloors: { type: Number, required: true },
+
     floors: {
       type: Map,
       of: FloorDataSchema,

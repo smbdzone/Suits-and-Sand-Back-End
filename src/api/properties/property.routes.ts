@@ -6,6 +6,7 @@ import {
   getProperties,
   getPropertyById,
   deleteProperty,
+  updateProperty,
 } from './property.controller';
 
 const router = express.Router();
@@ -53,7 +54,12 @@ const fileFilter = (req: Express.Request, file: Express.Multer.File, cb: multer.
   }
 };
 
-const upload = multer({ storage, fileFilter });
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 200 * 1024 * 1024 },
+});
+
 
 // === Upload Fields (dynamic floors/units) ===
 const uploadFields = [
@@ -61,20 +67,26 @@ const uploadFields = [
   { name: 'brochureFile', maxCount: 1 },
 ];
 
-// Dynamic fields for 20 floors and unit types
-for (let i = 0; i < 20; i++) {
+for (let i = 0; i < 30; i++) {
   uploadFields.push({ name: `floor_${i}_defaultLayout`, maxCount: 1 });
 
   const unitTypes = ['Studio', '1_BHK', '2_BHK', '3_BHK', '2_BHK_Duplex', '3_BHK_Duplex', 'Penthouse'];
   for (const unit of unitTypes) {
     uploadFields.push({ name: `floor_${i}_unit_${unit}`, maxCount: 1 });
+
+    for (let variantIndex = 0; variantIndex < 10; variantIndex++) {
+      uploadFields.push({ name: `floor_${i}_unit_${unit}_variant_${variantIndex}_image`, maxCount: 1 });
+      //uploadFields.push({ name: `floor_${i}_unit_${unit}_variant_${variantIndex}_name`, maxCount: 1 });
+    }
   }
 }
+
 
 // === Routes ===
 router.get('/', getProperties);
 router.get('/:id', getPropertyById);
 router.post('/', upload.fields(uploadFields), createProperty);
 router.delete('/:id', deleteProperty);
+router.put('/:id', upload.fields(uploadFields), updateProperty);
 
 export default router;

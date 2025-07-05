@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { connectDB } from './db';
+import cookieParser from 'cookie-parser';
 
 // Import your routes here
 import developerRoutes from './api/developers/developer.routes';
@@ -12,6 +13,14 @@ import propertyRoutes from './api/properties/property.routes'
 import articleRoutes from './api/articles/article.routes'
 import enquiryRoutes from './api/enquiries/enquiry.routes'
 import applicationRoutes from './api/jobApplication/applications.routes'
+import commentRoutes from './api/comments/comment.routes'
+import notificationRoutes from './api/notifications/notification.routes';
+import authRoutes from './api/auth/auth.routes';
+import userRoutes from './api/users/user.routes';
+import analyticsRoutes from './api/analytics/routes';
+import dotenv from 'dotenv';
+dotenv.config();
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -32,7 +41,10 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '200mb' }));
+app.use(express.urlencoded({ extended: true, limit: '200mb' }));
+app.use(cookieParser());
+
 
 // Static files
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
@@ -49,6 +61,13 @@ app.use('/api/properties', propertyRoutes)
 app.use('/api/articles', articleRoutes)
 app.use('/api/enquiries', enquiryRoutes)
 app.use('/api/jobApplication', applicationRoutes);
+app.use('/api/comments', commentRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/analytics', analyticsRoutes);
+
+
 
 app.listen(PORT, () => {
   console.log(`Backend running on http://localhost:${PORT}`);

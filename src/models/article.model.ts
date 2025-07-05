@@ -11,9 +11,8 @@ const articleSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: ['Tech', 'Business', 'Design'],
+    enum: ['News', 'Regulations', 'Announcements'],
   },
-  // FIXED: Changed from 'banner' to 'bannerUrl' to match controller
   bannerUrl: {
     type: String,
     required: true,
